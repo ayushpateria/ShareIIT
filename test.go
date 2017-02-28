@@ -6,6 +6,13 @@ import (
 	"path/filepath"
 	"log"
 )
+type File_s struct {
+	name string
+	hash string
+	size int
+}
+
+files := []File_s
 
 func list(){
 	filepath.Walk("Shared", func(path string, info os.FileInfo, err error) error {
@@ -16,13 +23,13 @@ func list(){
 				log.Fatal(err)
 			}
 			//fmt.Println(fi.Size())
+			f := File_s{}
+			f.name = fileInfo.Name()
+			f.size = fileInfo.Size()
+			
 			fmt.Println("File name:", fileInfo.Name())
 			fmt.Println("Size in bytes:", fileInfo.Size())
-			fmt.Println("Permissions:", fileInfo.Mode())
-			//fmt.Println("Last modified:", fileInfo.ModTime())
-			//fmt.Println("Is Directory: ", fileInfo.IsDir())
-			//fmt.Printf("System interface type: %T\n", fileInfo.Sys())
-			//fmt.Printf("System info: %+v\n\n", fileInfo.Sys())
+
 		return nil
 	})
 }
