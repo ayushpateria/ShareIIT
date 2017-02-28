@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"encoding/json"
 	"path/filepath"
 	"crypto/sha1"
 	"encoding/hex"
@@ -10,9 +11,9 @@ import (
 	"io"
 ) 
 type File_s struct {
-	name string
-	hash string
-	size int64	
+	Name string
+	Hash string
+	Size int64	
 }
 
 var files []File_s 
@@ -47,7 +48,7 @@ func hash_file_sha1(filePath string) (string, error) {
 	return returnSHA1String, nil
  
 }
-func list(){
+func list() string{
 	filepath.Walk("Shared", func(path string, info os.FileInfo, err error) error {
 		//fmt.Println(path)
 			file, err := os.Open(path)
@@ -55,23 +56,26 @@ func list(){
 			if err != nil {
 				log.Fatal(err)
 			}
-			if(fileInfo.Size() != 0){
+
+			if(fileInfo.Size() != 0 && !fileInfo.IsDir()){
 				f := File_s{}
-				f.name = fileInfo.Name()
-				f.size = fileInfo.Size()
+				f.Name = fileInfo.Name()
+				f.Size = fileInfo.Size()
 			
 				hash,_ := hash_file_sha1(path)
-				f.hash = hash
+				f.Hash = hash
 				files = append(files, f)
-				fmt.Println("File name:", fileInfo.Name())
-				fmt.Println("Size in bytes:", fileInfo.Size())
-				fmt.Println("File Hash:", hash)
 			}
  		return nil
 	})
+	fmt.Println(files)
+	b, err := json.Marshal(files)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	return string(b)
 }
 
 func main(){
-	files = make([]File_s, 10)
 	list()
 }
