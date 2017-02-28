@@ -12,10 +12,10 @@ import (
 type File_s struct {
 	name string
 	hash string
-	size int
+	size int64	
 }
 
-files := []File_s
+var files []File_s 
 
 func hash_file_sha1(filePath string) (string, error) {
 	//Initialize variable returnMD5String now in case an error has to be returned
@@ -55,23 +55,23 @@ func list(){
 			if err != nil {
 				log.Fatal(err)
 			}
-			//fmt.Println(fi.Size())
- 			f := File_s{}
-			f.name = fileInfo.Name()
-			f.size = fileInfo.Size()
+			if(fileInfo.Size() != 0){
+				f := File_s{}
+				f.name = fileInfo.Name()
+				f.size = fileInfo.Size()
 			
- 			hash,_ := hash_file_sha1(path)
-			fmt.Println("File name:", fileInfo.Name())
-			fmt.Println("Size in bytes:", fileInfo.Size())
-			fmt.Println("Permissions:", fileInfo.Mode())
-			fmt.Println("File Hash:", hash)
-			//fmt.Println("Is Directory: ", fileInfo.IsDir())
-			//fmt.Printf("System interface type: %T\n", fileInfo.Sys())
-			//fmt.Printf("System info: %+v\n\n", fileInfo.Sys())
+				hash,_ := hash_file_sha1(path)
+				f.hash = hash
+				files = append(files, f)
+				fmt.Println("File name:", fileInfo.Name())
+				fmt.Println("Size in bytes:", fileInfo.Size())
+				fmt.Println("File Hash:", hash)
+			}
  		return nil
 	})
 }
 
 func main(){
+	files = make([]File_s, 10)
 	list()
 }
