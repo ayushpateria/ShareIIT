@@ -3,8 +3,15 @@ package main
 import (
     "fmt"
     "net"
+    "strconv"
     "os"
     "bufio"
+    "encoding/json"
+	  "path/filepath"
+	  "crypto/sha1"
+	  "encoding/hex"
+	  "log"
+	  "io"
 )
 //Define the size of how big the chunks of data will be send each time
 const BUFFERSIZE = 1024
@@ -14,6 +21,15 @@ const (
     CONN_PORT = "3333"
     CONN_TYPE = "tcp"
 )
+
+type File_s struct {
+	Name string
+	Hash string
+	Size int64	
+  path string
+}
+
+var files []File_s 
 
 func main() {
     // Listen for incoming connections.
@@ -48,15 +64,22 @@ func handleRequest(conn net.Conn) {
   }
   
   if choice[:1] == "1" {
-            conn.Write([]byte(" The files availabe are -----\n"))
-            // list()
+            conn.Write([]byte(list()))
+             
   }
   if choice[:1] == "2" { // input format : 2 [hash of the file]
             conn.Write([]byte(" im in choice 2-----\n"))
             hash := choice[2:len(choice)-1]
             conn.Write([]byte(hash))
+
+            for _, f := range files {
+              if (f.Hash == hash) {
+               conn.Write([]byte("You gotta download " + f.Name))
+               sendFileToClient(conn, f.path)
+              }
+            } 
             // Open the file and write its bytes to the connection.
-             sendFileToClient(conn)
+          //   
 
   }
    }
@@ -76,12 +99,72 @@ func fillString(retunString string, toLength int) string {
   return retunString
 }
 
+func list() string{
+  files = nil
+	filepath.Walk("Shared", func(path string, info os.FileInfo, err error) error {
+		//fmt.Println(path)
+			file, err := os.Open(path)
+			fileInfo, err := file.Stat()
+			if err != nil {
+				log.Fatal(err)
+			}
 
-func sendFileToClient(connection net.Conn) {
+			if(fileInfo.Size() != 0 && !fileInfo.IsDir()){
+				f := File_s{}
+				f.Name = fileInfo.Name()
+				f.Size = fileInfo.Size()
+        f.path = path
+				hash,_ := hash_file_sha1(path)
+				f.Hash = hash
+				files = append(files, f)
+			}
+ 		return nil
+	})
+  
+	b, err := json.Marshal(files)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	return string(b)
+}
+
+
+func hash_file_sha1(filePath string) (string, error) {
+	//Initialize variable returnMD5String now in case an error has to be returned
+	var returnSHA1String string
+	
+	//Open the filepath passed by the argument and check for any error
+	file, err := os.Open(filePath)
+	if err != nil {
+		return returnSHA1String, err
+	}
+	
+	//Tell the program to call the following function when the current function returns
+	defer file.Close()
+	
+	//Open a new SHA1 hash interface to write to
+	hash := sha1.New()
+	
+	//Copy the file in the hash interface and check for any error
+	if _, err := io.Copy(hash, file); err != nil {
+		return returnSHA1String, err
+	}
+	
+	//Get the 20 bytes hash
+	hashInBytes := hash.Sum(nil)[:20]
+	
+	//Convert the bytes to a string
+	returnSHA1String = hex.EncodeToString(hashInBytes)
+	
+	return returnSHA1String, nil
+ 
+}
+
+func sendFileToClient(connection net.Conn, path string) {
   fmt.Println("A client has connected!")
-  defer connection.Close()
+  //defer connection.Close()
   //Open the file that needs to be send to the client
-  file, err := os.Open("aimssem4.png")                      //pass a hash ka return string i.e -filename in that sharedfolder
+  file, err := os.Open(path)                      //pass a hash ka return string i.e -filename in that sharedfolder
   if err != nil {
     fmt.Println(err)
     return
