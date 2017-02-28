@@ -45,16 +45,16 @@ func handleRequest(conn net.Conn) {
     fmt.Println("Error reading:", err.Error())
   }
   
-  if choice == "1\n" {
+  if choice[:1] == "1" {
             conn.Write([]byte(" The files availabe are -----\n"))
+            // list()
   }
-  if choice == "2\n" {
+  if choice[:1] == "2" { // input format : 2 [hash of the file]
             conn.Write([]byte(" im in choice 2-----\n"))
-            filename , _ := bufio.NewReader(conn).ReadString('\n')
-            conn.Write([]byte(filename[2:len(filename)]))
+            hash := choice[2:len(choice)-1]
+            conn.Write([]byte(hash))
+            // Open the file and write its bytes to the connection.
   }
-  // Send a response back to person contacting us.
-  }
-  // Close the connection when you're done with it.
- //  conn.Close()
+   }
+  //  conn.Close()
 }
