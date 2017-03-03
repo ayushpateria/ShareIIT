@@ -62,25 +62,26 @@ func handleRequest(conn net.Conn) {
   if err != nil {
     fmt.Println("Error reading:", err.Error())
   }
-  
+  fmt.Println(choice)
   if choice[:1] == "1" {
-            conn.Write([]byte(list()))
+            conn.Write([]byte("im in 1 \n"))
+            list()
+            fmt.Println(files)
+            
+            //conn.Write([]byte(list()))
              
   }
   if choice[:1] == "2" { // input format : 2 [hash of the file]
-            conn.Write([]byte(" im in choice 2-----\n"))
+            //conn.Write([]byte(" im in choice 2-----\n"))
             hash := choice[2:len(choice)-1]
-            conn.Write([]byte(hash))
-
+            //conn.Write([]byte(hash))
+            fmt.Println(hash)
             for _, f := range files {
               if (f.Hash == hash) {
-               conn.Write([]byte("You gotta download " + f.Name))
-               sendFileToClient(conn, f.path)
+               //conn.Write([]byte("You gotta download " + f.Name))
+                go sendFileToClient(conn, f.path)
               }
             } 
-            // Open the file and write its bytes to the connection.
-          //   
-
   }
    }
   //  conn.Close()
@@ -169,15 +170,16 @@ func sendFileToClient(connection net.Conn, path string) {
     fmt.Println(err)
     return
   }
-  defer file.Close()
   //Get the filename and filesize
   fileInfo, err := file.Stat()
   if err != nil {
     fmt.Println(err)
     return
   }
-  fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
-  fileName := fillString(fileInfo.Name(), 64)
+  fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 20), 20)
+  fileName := fillString(fileInfo.Name(), 128)
+  fmt.Println(string(fileName))
+      fmt.Println(string(fileSize))
                 //Send the file header first so the client knows the filename and how long it has to read the incomming file
   fmt.Println("Sending filename and filesize!")
                                                     //Write first 10 bytes to client telling them the filesize
