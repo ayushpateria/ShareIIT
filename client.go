@@ -105,6 +105,7 @@ func main() {
 	    	}
 
 	}else if option[:1] == "2"{
+
 				if (len(files) == 0) {
 					createList()
 				}
@@ -120,7 +121,7 @@ func main() {
 				break
 			}
 	}
-    	
+
 	}
 	
 func recivefile(i int) {
