@@ -20,7 +20,7 @@ import (
 const BUFFERSIZE = 1024
 
 const (
-    CONN_HOST = "localhost"
+    CONN_HOST = "0.0.0.0"
     CONN_PORT = "3333"
     CONN_TYPE = "tcp"
 )
