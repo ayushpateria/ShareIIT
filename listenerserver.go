@@ -62,12 +62,10 @@ func handleRequest(conn net.Conn) {
   if err != nil {
     fmt.Println("Error reading:", err.Error())
   }
-  fmt.Println(choice)
   if choice[:1] == "1" {
-            conn.Write([]byte("im in 1 \n"))
-            list()
-            fmt.Println(files)
-            
+            //conn.Write([]byte("im in 1 \n"))
+            b := list()
+            conn.Write([]byte(b+"\n"))
             //conn.Write([]byte(list()))
              
   }
@@ -84,7 +82,7 @@ func handleRequest(conn net.Conn) {
             } 
   }
    }
-  //  conn.Close()
+  defer  conn.Close()
 }
 
 //This function is to 'fill'

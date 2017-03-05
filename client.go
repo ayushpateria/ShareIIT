@@ -2,14 +2,26 @@
 package main
 
 import (
-	"fmt"
+	 "fmt"
+	 
 	"net"
 	"os"
     "bufio"
     "io"
     "strconv"
 	"strings"
-)
+	"encoding/json"
+	)
+
+type File_s struct {
+	Name string
+	Hash string
+	Size float64	
+  path string
+}
+
+var files []File_s 
+
 
 //Define that the binairy data of the file will be sent 1024 bytes at a time
 const BUFFERSIZE = 1024
@@ -21,7 +33,7 @@ func main() {
 		panic(err)
 	}
 	for {
-	//	defer connection.Close()
+	defer connection.Close()
 	fmt.Println("Hi !! Enter your choice ----")
 	fmt.Println("->>>>>>>>>>>Enter 1 for PRINTING all available files ")
 	fmt.Println("->>>>>>>>>>>Enter 2 for DOWNLOADING a particular file ")
@@ -30,13 +42,21 @@ func main() {
 	// read in input from stdin
     reader := bufio.NewReader(os.Stdin)
     option, _ := reader.ReadString('\n')
-    fmt.Print(option)
     if option[:1] == "1" {
-    	fmt.Println("im in 1")
 	    // send to socket
 	    fmt.Fprintf(connection, option + "\n")
 	    message, _ := bufio.NewReader(connection).ReadString('\n')
-	    fmt.Print("Message from server: "+message)
+	    err := json.Unmarshal([]byte(message), &files)
+	    if err != nil { } 
+	    fmt.Println("FILEID              FILENAME                   FILESIZE (In MB) \n")
+
+	    for  i, value := range files {
+	    	fmt.Print((i+1))
+	    	fmt.Print("."+value.Name+"           ")
+	    	fmt.Print((value.Size)/1024.0)
+	    	fmt.Println("  MB")
+	    	}
+
 	}else if option[:1] == "2"{
 				fmt.Println("Enter- 2 'hash of the file' - for the file you want to download  ")
 				reader := bufio.NewReader(os.Stdin)
