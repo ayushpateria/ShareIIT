@@ -56,7 +56,7 @@ func main() {
 // Handles incoming requests.
 func handleRequest(conn net.Conn) {
   // Make a buffer to hold incoming data.
-  for {
+
   // Read the incoming connection into the buffer.
   choice, err := bufio.NewReader(conn).ReadString('\n')
   if err != nil {
@@ -66,6 +66,7 @@ func handleRequest(conn net.Conn) {
             //conn.Write([]byte("im in 1 \n"))
             b := list()
             conn.Write([]byte(b+"\n"))
+            conn.Close()
             //conn.Write([]byte(list()))
              
   }
@@ -81,8 +82,7 @@ func handleRequest(conn net.Conn) {
               }
             } 
   }
-   }
-  defer  conn.Close()
+   
 }
 
 //This function is to 'fill'

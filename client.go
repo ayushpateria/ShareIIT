@@ -2,14 +2,16 @@
 package main
 
 import (
-	 "fmt"
-	 
+	"fmt"
 	"net"
 	"os"
     "bufio"
     "io"
     "strconv"
+    "net/http"
 	"strings"
+	"io/ioutil"
+	"sync"
 	"encoding/json"
 	)
 
@@ -17,57 +19,120 @@ type File_s struct {
 	Name string
 	Hash string
 	Size float64	
-  path string
+ 	path string
+	ip string
 }
 
 var files []File_s 
-
+var ips []string
+var LIST_URL = "http://ayushpateria.com/ShareIIT/list.php"
 
 //Define that the binairy data of the file will be sent 1024 bytes at a time
 const BUFFERSIZE = 1024
 
-func main() {
-	connection, err := net.Dial("tcp", "localhost:3333")
-	fmt.Println("Connected to server, start receiving the file name and file size")
+
+func fetchIPS() {
+		response, err := http.Get(LIST_URL)
+        if err != nil {
+                fmt.Println(err)
+        } else {
+                defer response.Body.Close()
+				r,_ := ioutil.ReadAll(response.Body)
+                json.Unmarshal(r, &ips)
+                if err != nil {
+                        fmt.Println(err)
+                }
+        }
+
+}
+
+func updateList(ip string) {
+	var lFiles []File_s 
+	connection, err := net.Dial("tcp", ip+":3333")
 	if err != nil {
 		panic(err)
-	}
-	for {
+}
 	defer connection.Close()
-	fmt.Println("Hi !! Enter your choice ----")
-	fmt.Println("->>>>>>>>>>>Enter 1 for PRINTING all available files ")
-	fmt.Println("->>>>>>>>>>>Enter 2 for DOWNLOADING a particular file ")
-	fmt.Println("->>>>>>>>>>>Enter 3 for SEARCHING for a particular file ")
+	fmt.Fprintf(connection, "1\n")	
+	message, _ := bufio.NewReader(connection).ReadString('\n')
+
+	json.Unmarshal([]byte(message), &lFiles)
+	for i,_ := range(lFiles) {
+		lFiles[i].ip = ip
+	}
+	files = append(files, lFiles...)
+}
+
+func createList() {
+		files = nil
+		fetchIPS()
+		var wg sync.WaitGroup
+		for _, ip := range ips {
+			// Increment the WaitGroup counter.
+                wg.Add(1)
+			go func(ip string) {
+                        // Decrement the counter when the goroutine completes.
+                       defer wg.Done()
+                        // Fetch the URL.
+                        updateList(ip)
+                }(ip)
+		}
+	// Wait for all Lists fetches to complete.
+        wg.Wait()
+}
+
+func main() {
+
+	fmt.Println("Welcome to ShareIIT! Your intra college file sharing hub.")
+	for {
+	fmt.Println("1. List all available files.")
+	fmt.Println("2. Download a file,")
+	fmt.Println("3. Search a file.")
+	fmt.Println("0. Exit.")
 	
 	// read in input from stdin
     reader := bufio.NewReader(os.Stdin)
     option, _ := reader.ReadString('\n')
     if option[:1] == "1" {
-	    // send to socket
-	    fmt.Fprintf(connection, option + "\n")
-	    message, _ := bufio.NewReader(connection).ReadString('\n')
-	    err := json.Unmarshal([]byte(message), &files)
-	    if err != nil { } 
-	    fmt.Println("FILEID              FILENAME                   FILESIZE (In MB) \n")
+		
+		createList()
 
 	    for  i, value := range files {
 	    	fmt.Print((i+1))
-	    	fmt.Print("."+value.Name+"           ")
-	    	fmt.Print((value.Size)/1024.0)
-	    	fmt.Println("  MB")
+	    	fmt.Print(". "+value.Name+"		")
+	    	fmt.Print(value.Size)
+	    	fmt.Println(" kb")
 	    	}
 
 	}else if option[:1] == "2"{
-				fmt.Println("Enter- 2 'hash of the file' - for the file you want to download  ")
-				reader := bufio.NewReader(os.Stdin)
-    			option, _ := reader.ReadString('\n')
-    			fmt.Fprintf(connection, option + "\n")
-    			go recivefile(connection)
-    		}
-    	}
+				if (len(files) == 0) {
+					createList()
+				}
+				fmt.Println("Enter the ID of the file from the list : ")
+				var id int
+    			fmt.Scanf("%d", &id)
+				if (id > len(files)) {
+					fmt.Println("Please enter a valid ID.")
+				} else {
+    			recivefile(id-1)
+				}
+    		} else if option[:1] == "0"{
+				break
+			}
+	}
+    	
 	}
 	
-func recivefile(connection net.Conn) {
+func recivefile(i int) {
+			file := files[i]
+			fmt.Println("Downloading " + file.Name + ", this may take a while.")
+			connection, err := net.Dial("tcp", file.ip+":3333")
+			if err != nil {
+				panic(err)
+			}
+			defer connection.Close()
+			hash := files[i].Hash
+    		fmt.Fprintf(connection, "2 "+hash + "\n")
 			//Create buffer to read in the name and size of the file
 			bufferFileName := make([]byte, 128)
 			bufferFileSize := make([]byte, 20)
