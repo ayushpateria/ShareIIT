@@ -5,12 +5,15 @@ import (
     "net"
     "strconv"
     "os"
+    "strings"
     "bufio"
     "encoding/json"
 	  "path/filepath"
 	  "crypto/sha1"
 	  "encoding/hex"
 	  "log"
+    "time"
+    "net/http"
 	  "io"
 )
 //Define the size of how big the chunks of data will be send each time
@@ -30,8 +33,52 @@ type File_s struct {
 }
 
 var files []File_s 
-
+var INSERT_URL = "http://ayushpateria.com/ShareIIT/insert.php"
+var myIP string
 func main() {
+
+quit := make(chan struct{})
+
+ifaces, err := net.Interfaces()
+// handle err
+for _, i := range ifaces {
+    addrs, _ := i.Addrs()
+    // handle err
+    for _, addr := range addrs {
+        var ip net.IP
+        switch v := addr.(type) {
+        case *net.IPNet:
+                ip = v.IP
+        case *net.IPAddr:
+                ip = v.IP
+        }
+
+        if(ip.String() != "127.0.0.1" && strings.Count(ip.String(), ".") == 3) {
+            myIP = ip.String()
+        }
+    }
+}
+
+ticker := time.NewTicker(300 * time.Second)
+go func() {
+    for {
+       select {
+        case <- ticker.C:
+            response, err := http.Get(INSERT_URL+"?IP="+myIP)
+        if err != nil {
+                fmt.Println(err)
+        } else {
+                defer response.Body.Close()
+                if err != nil {
+                        fmt.Println(err)
+                }
+        }
+        case <- quit:
+            ticker.Stop()
+            return
+        }
+    }
+ }()
     // Listen for incoming connections.
     l, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
     if err != nil {
