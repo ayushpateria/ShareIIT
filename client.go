@@ -2,8 +2,7 @@
 package main
 
 import (
-	 "fmt"
-	 
+	"fmt"
 	"net"
 	"os"
     "bufio"
@@ -58,10 +57,13 @@ func main() {
 	    	}
 
 	}else if option[:1] == "2"{
-				fmt.Println("Enter- 2 'hash of the file' - for the file you want to download  ")
+				fmt.Fprintf(connection, option + "\n")
+				fmt.Println("Enter the FILEID for the file you want to download  ")
 				reader := bufio.NewReader(os.Stdin)
     			option, _ := reader.ReadString('\n')
-    			fmt.Fprintf(connection, option + "\n")
+    			i, _:= strconv.Atoi(option[:1])
+    			hash := files[i-1].Hash
+    			fmt.Fprintf(connection, hash + "\n")
     			go recivefile(connection)
     		}
     	}

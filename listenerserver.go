@@ -69,14 +69,14 @@ func handleRequest(conn net.Conn) {
             //conn.Write([]byte(list()))
              
   }
-  if choice[:1] == "2" { // input format : 2 [hash of the file]
-            //conn.Write([]byte(" im in choice 2-----\n"))
-            hash := choice[2:len(choice)-1]
+  if choice[:1] == "2" { 
+            hash ,err := bufio.NewReader(conn).ReadString('\n')
+            if err != nil {
+                  fmt.Println("Error reading:", err.Error())
+                  }
             //conn.Write([]byte(hash))
-            fmt.Println(hash)
             for _, f := range files {
-              if (f.Hash == hash) {
-               //conn.Write([]byte("You gotta download " + f.Name))
+              if (hash == f.Hash+"\n") {
                 go sendFileToClient(conn, f.path)
               }
             } 
