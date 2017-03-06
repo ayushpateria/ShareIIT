@@ -17,7 +17,7 @@ import (
 	  "io"
 )
 //Define the size of how big the chunks of data will be send each time
-const BUFFERSIZE = 1024
+const BUFFERSIZE = 81920
 
 const (
     CONN_HOST = "0.0.0.0"
@@ -35,36 +35,24 @@ type File_s struct {
 var files []File_s 
 var INSERT_URL = "http://ayushpateria.com/ShareIIT/insert.php"
 var myIP string
-func main() {
 
-quit := make(chan struct{})
 
-ifaces, err := net.Interfaces()
-// handle err
-for _, i := range ifaces {
-    addrs, _ := i.Addrs()
-    // handle err
-    for _, addr := range addrs {
-        var ip net.IP
-        switch v := addr.(type) {
-        case *net.IPNet:
-                ip = v.IP
-        case *net.IPAddr:
-                ip = v.IP
-        }
-
-        if(ip.String() != "127.0.0.1" && strings.Count(ip.String(), ".") == 3) {
-            myIP = ip.String()
-        }
+// Get preferred outbound ip of this machine. Taken from http://stackoverflow.com/a/37382208/921872
+func GetOutboundIP() string {
+    conn, err := net.Dial("udp", "8.8.8.8:80")
+    if err != nil {
+        log.Fatal(err)
     }
+    defer conn.Close()
+
+    localAddr := conn.LocalAddr().String()
+    idx := strings.LastIndex(localAddr, ":")
+    return localAddr[0:idx]
 }
 
-ticker := time.NewTicker(300 * time.Second)
-go func() {
-    for {
-       select {
-        case <- ticker.C:
-            response, err := http.Get(INSERT_URL+"?IP="+myIP)
+
+func sendIP() {
+  response, err := http.Get(INSERT_URL+"?IP="+GetOutboundIP())
         if err != nil {
                 fmt.Println(err)
         } else {
@@ -73,6 +61,20 @@ go func() {
                         fmt.Println(err)
                 }
         }
+}
+func main() {
+
+sendIP()
+
+quit := make(chan struct{})
+
+ticker := time.NewTicker(300 * time.Second)
+
+go func() {
+    for {
+       select {
+        case <- ticker.C:
+            sendIP()
         case <- quit:
             ticker.Stop()
             return
@@ -118,14 +120,11 @@ func handleRequest(conn net.Conn) {
              
   }
   if choice[:1] == "2" { 
-            hash ,err := bufio.NewReader(conn).ReadString('\n')
-            if err != nil {
-                  fmt.Println("Error reading:", err.Error())
-                  }
-            //conn.Write([]byte(hash))
-            for _, f := range files {
-              if (hash == f.Hash+"\n") {
-                go sendFileToClient(conn, f.path)
+            hash := choice[2:len(choice)-1]
+              
+             for _, f := range files {
+               if (f.Hash == hash) {
+                   sendFileToClient(conn, f.path)
               }
             } 
   }

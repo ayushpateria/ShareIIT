@@ -28,7 +28,7 @@ var ips []string
 var LIST_URL = "http://ayushpateria.com/ShareIIT/list.php"
 
 //Define that the binairy data of the file will be sent 1024 bytes at a time
-const BUFFERSIZE = 1024
+const BUFFERSIZE = 81920
 
 
 func fetchIPS() {
