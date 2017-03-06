@@ -117,7 +117,29 @@ func main() {
 			if id > len(files) {
 				fmt.Println("Please enter a valid ID.")
 			} else {
-				recivefile(id - 1)
+				receivefile(id - 1)
+			}
+		} else if option[:1] == "3" {
+		
+			createList()
+			
+			fmt.Print("Enter file name : ")
+			reader := bufio.NewReader(os.Stdin)
+			filename, _ := reader.ReadString('\n')
+			flag := 0
+			//fmt.Print(filename)
+			for i, value := range files {
+				//fmt.Println(value.Name)
+				if strings.Contains(value.Name, strings.Trim(filename, "\n")) {
+					fmt.Print((i + 1))
+					fmt.Print(". " + value.Name + "		")
+					fmt.Print(value.Size)
+					fmt.Println(" kb")
+					flag = 1
+				}
+			}
+			if flag == 0 {
+				fmt.Print("No items match your search.\n")
 			}
 		} else if option[:1] == "0" {
 			break
@@ -126,7 +148,7 @@ func main() {
 
 }
 
-func recivefile(i int) {
+func receivefile(i int) {
 	file := files[i]
 	fmt.Println("Downloading " + file.Name + ", this may take a while.")
 	connection, err := net.Dial("tcp", file.ip+":3333")
