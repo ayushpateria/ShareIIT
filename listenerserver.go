@@ -159,7 +159,7 @@ func list() string{
 				f.Name = fileInfo.Name()
 				f.Size = fileInfo.Size()
         f.path = path
-				hash,_ := hash_file_sha1(path)
+				hash,_ := hash_file_sha1(f)
 				f.Hash = hash
 				files = append(files, f)
 			}
@@ -173,28 +173,27 @@ func list() string{
 	return string(b)
 }
 
-
-func hash_file_sha1(filePath string) (string, error) {
+// Not hashing the complete file as it's slow.
+func hash_file_sha1(f File_s) (string, error) {
 	//Initialize variable returnMD5String now in case an error has to be returned
 	var returnSHA1String string
 	
 	//Open the filepath passed by the argument and check for any error
-	file, err := os.Open(filePath)
+	file, err := os.Open(f.path)
 	if err != nil {
 		return returnSHA1String, err
 	}
-	
+  // Read first 20 bytes.
+  b1 := make([]byte, 20)
+  file.Read(b1)
+	ss := f.Name + string(f.Size) + string(b1)
 	//Tell the program to call the following function when the current function returns
 	defer file.Close()
 	
 	//Open a new SHA1 hash interface to write to
 	hash := sha1.New()
 	
-	//Copy the file in the hash interface and check for any error
-	if _, err := io.Copy(hash, file); err != nil {
-		return returnSHA1String, err
-	}
-	
+	hash.Write([]byte(ss))
 	//Get the 20 bytes hash
 	hashInBytes := hash.Sum(nil)[:20]
 	
