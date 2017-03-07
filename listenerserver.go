@@ -238,7 +238,6 @@ func sendFileToClient(connection net.Conn, path string, start int64, end int64) 
 		if n > int(end-start) {
 			n = int(end - start)
 		}
-		fmt.Printf("%d - %d : %d", start, end, n)
 		connection.Write(buf[:n])
 	}
 

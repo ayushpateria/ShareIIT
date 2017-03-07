@@ -11,7 +11,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
+	"time"
 )
 
 type File_s struct {
@@ -47,9 +49,10 @@ func fetchIPS() {
 
 func updateList(ip string) {
 	var lFiles []File_s
-	connection, err := net.Dial("tcp", ip+":3333")
+	connection, err := net.DialTimeout("tcp", ip+":3333", time.Duration(5)*time.Second)
 	if err != nil {
-		panic(err)
+		return
+		//	panic(err)
 	}
 	defer connection.Close()
 	fmt.Fprintf(connection, "1\n")
@@ -140,6 +143,11 @@ func recivefile(i int) {
 	var wg sync.WaitGroup
 	inc := int64(math.Ceil(size / float64(NUM_THREADS)))
 	var j int64
+	t := time.Now()
+	threadsRemaining := NUM_THREADS
+	var mutex = &sync.Mutex{}
+	var bytesTransferred int64
+
 	for j = 0; j < int64(math.Ceil(size)); j = j + inc {
 		start := j
 		end := start + inc
@@ -147,9 +155,9 @@ func recivefile(i int) {
 			end = int64(math.Ceil(size))
 		}
 
+		wg.Add(1)
 		go func(start int64, end int64) {
 
-			wg.Add(1)
 			defer wg.Done()
 
 			newFile, err := os.Create(file.Name)
@@ -177,7 +185,15 @@ func recivefile(i int) {
 					break
 				}
 			}
-			fmt.Printf("Done thread " + string(j))
+			mutex.Lock()
+			bytesTransferred += end - start
+			threadsRemaining--
+			speed := (bytesTransferred / 1024) / int64(math.Ceil(time.Since(t).Seconds()))
+			out := "Finished : " + strconv.Itoa((NUM_THREADS-threadsRemaining)*100/NUM_THREADS) + "%, Avg. Speed : " + strconv.Itoa(int(speed)) + " kb/s\n"
+			os.Stdout.Write([]byte(out))
+			os.Stdout.Sync()
+			mutex.Unlock()
+
 		}(start, end)
 	}
 
