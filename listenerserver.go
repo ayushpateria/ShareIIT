@@ -18,7 +18,7 @@ import (
 )
 
 //Define the size of how big the chunks of data will be send each time
-const BUFFERSIZE = 81920
+var BUFFERSIZE int64 = 81920
 
 const (
 	CONN_HOST = "0.0.0.0"
@@ -120,11 +120,18 @@ func handleRequest(conn net.Conn) {
 
 	}
 	if choice[:1] == "2" {
-		hash := choice[2 : len(choice)-1]
+		if len(files) == 0 {
+			list()
+		}
+		parms := strings.Fields(choice)
+		hash := parms[1]
 
 		for _, f := range files {
 			if f.Hash == hash {
-				sendFileToClient(conn, f.path)
+				start, _ := strconv.Atoi(parms[2])
+				end, _ := strconv.Atoi(parms[3])
+				sendFileToClient(conn, f.path, int64(start), int64(end))
+				conn.Close()
 			}
 		}
 	}
@@ -204,7 +211,7 @@ func hash_file_sha1(f File_s) (string, error) {
 
 }
 
-func sendFileToClient(connection net.Conn, path string) {
+func sendFileToClient(connection net.Conn, path string, start int64, end int64) {
 	fmt.Println("A client has connected!")
 	//defer connection.Close()
 	//Open the file that needs to be send to the client
@@ -213,33 +220,33 @@ func sendFileToClient(connection net.Conn, path string) {
 		fmt.Println(err)
 		return
 	}
-	//Get the filename and filesize
-	fileInfo, err := file.Stat()
-	if err != nil {
-		fmt.Println(err)
-		return
+
+	if BUFFERSIZE > end-start {
+		BUFFERSIZE = end - start
 	}
-	fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 20), 20)
-	fileName := fillString(fileInfo.Name(), 128)
-	fmt.Println(string(fileName))
-	fmt.Println(string(fileSize))
-	//Send the file header first so the client knows the filename and how long it has to read the incomming file
-	fmt.Println("Sending filename and filesize!")
-	//Write first 10 bytes to client telling them the filesize
-	connection.Write([]byte(fileSize))
-	//Write 64 bytes to client containing the filename
-	connection.Write([]byte(fileName))
-	//Initialize a buffer for reading parts of the file in
 	sendBuffer := make([]byte, BUFFERSIZE)
 	//Start sending the file to the client
 	fmt.Println("Start sending file!")
+	file.Seek(start, 0)
+	var sentBytes int64 = 0
 	for {
-		_, err = file.Read(sendBuffer)
+		if end-start-sentBytes < BUFFERSIZE {
+			BUFFERSIZE = end - start - sentBytes
+			fmt.Printf("%d - %d : Sent Bytes : %d BUFFER : %d\n", start, end, sentBytes, BUFFERSIZE)
+			sendBuffer = make([]byte, BUFFERSIZE)
+		}
+		r, err := file.Read(sendBuffer)
 		if err == io.EOF {
 			//End of file reached, break out of for loop
 			break
 		}
 		connection.Write(sendBuffer)
+		sentBytes += int64(r)
+		fmt.Printf("%d - %d : Sent Bytes : %d\n", start, end, sentBytes)
+
+		if sentBytes == end-start {
+			break
+		}
 	}
 	fmt.Println("File has been sent, closing connection!")
 	return
