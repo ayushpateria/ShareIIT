@@ -152,7 +152,7 @@ func main() {
 
 }
 
-func recivefile(i int) {
+func receivefile(i int) {
 
 	NUM_THREADS := 5
 
