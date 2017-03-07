@@ -221,33 +221,27 @@ func sendFileToClient(connection net.Conn, path string, start int64, end int64) 
 		return
 	}
 
-	if BUFFERSIZE > end-start {
-		BUFFERSIZE = end - start
-	}
-	sendBuffer := make([]byte, BUFFERSIZE)
-	//Start sending the file to the client
-	fmt.Println("Start sending file!")
 	file.Seek(start, 0)
-	var sentBytes int64 = 0
-	for {
-		if end-start-sentBytes < BUFFERSIZE {
-			BUFFERSIZE = end - start - sentBytes
-			fmt.Printf("%d - %d : Sent Bytes : %d BUFFER : %d\n", start, end, sentBytes, BUFFERSIZE)
-			sendBuffer = make([]byte, BUFFERSIZE)
-		}
-		r, err := file.Read(sendBuffer)
-		if err == io.EOF {
-			//End of file reached, break out of for loop
-			break
-		}
-		connection.Write(sendBuffer)
-		sentBytes += int64(r)
-		fmt.Printf("%d - %d : Sent Bytes : %d\n", start, end, sentBytes)
 
-		if sentBytes == end-start {
+	r := bufio.NewReader(file)
+	// make a buffer to keep chunks that are read
+	buf := make([]byte, BUFFERSIZE)
+	for {
+		// read a chunk
+		n, err := r.Read(buf)
+		if err != nil && err != io.EOF {
+			log.Fatal(err)
+		}
+		if n == 0 {
 			break
 		}
+		if n > int(end-start) {
+			n = int(end - start)
+		}
+		fmt.Printf("%d - %d : %d", start, end, n)
+		connection.Write(buf[:n])
 	}
+
 	fmt.Println("File has been sent, closing connection!")
 	return
 }

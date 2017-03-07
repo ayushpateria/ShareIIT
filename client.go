@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math"
 	"net"
 	"net/http"
@@ -136,12 +137,6 @@ func recivefile(i int) {
 
 	size := file.Size
 
-	newFile, err := os.Create(file.Name)
-	if err != nil {
-		panic(err)
-	}
-	defer newFile.Close()
-
 	var wg sync.WaitGroup
 	inc := int64(math.Ceil(size / float64(NUM_THREADS)))
 	var j int64
@@ -152,11 +147,16 @@ func recivefile(i int) {
 			end = int64(math.Ceil(size))
 		}
 
-		go func() {
+		go func(start int64, end int64) {
 
 			wg.Add(1)
 			defer wg.Done()
 
+			newFile, err := os.Create(file.Name)
+			if err != nil {
+				panic(err)
+			}
+			defer newFile.Close()
 			connection, err := net.Dial("tcp", file.ip+":3333")
 			if err != nil {
 				panic(err)
@@ -165,22 +165,20 @@ func recivefile(i int) {
 
 			newFile.Seek(start, 0)
 			fmt.Fprintf(connection, "2 %s %d %d\n", hash, start, end)
-			fmt.Printf("2 %s %d %d\n", hash, start, end)
 
-			var receivedBytes int64
 			//Start writing in the file
 			for {
-				if (end - start - receivedBytes) < BUFFERSIZE {
-					io.CopyN(newFile, connection, (end - start - receivedBytes))
-					//We are done writing the file, break out of the loop
+
+				n, err := io.CopyN(newFile, connection, BUFFERSIZE)
+				if err != nil && err != io.EOF {
+					log.Fatal(err)
+				}
+				if n == 0 {
 					break
 				}
-				io.CopyN(newFile, connection, BUFFERSIZE)
-				//Increment the counter
-				receivedBytes += BUFFERSIZE
 			}
 			fmt.Printf("Done thread " + string(j))
-		}()
+		}(start, end)
 	}
 
 	// Wait until all parts have been finished downloading.
