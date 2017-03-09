@@ -106,7 +106,7 @@ func main() {
 			for i, value := range files {
 				fmt.Print((i + 1))
 				fmt.Print(". " + value.Name + "		")
-				fmt.Print(value.Size)
+				fmt.Print(int(math.Ceil(value.Size / 1024)))
 				fmt.Println(" kb")
 			}
 
@@ -137,7 +137,7 @@ func main() {
 				if strings.Contains(value.Name, strings.Trim(filename, "\n")) {
 					fmt.Print((i + 1))
 					fmt.Print(". " + value.Name + "		")
-					fmt.Print(value.Size)
+					fmt.Print(int(value.Size))
 					fmt.Println(" kb")
 					flag = 1
 				}
@@ -171,6 +171,7 @@ func receivefile(i int) {
 	var mutex = &sync.Mutex{}
 	var bytesTransferred int64
 
+	// We divivde each file in pieces and give them to each thread.
 	for j = 0; j < int64(math.Ceil(size)); j = j + inc {
 		start := j
 		end := start + inc
@@ -194,7 +195,7 @@ func receivefile(i int) {
 			}
 			defer connection.Close()
 
-			newFile.Seek(start, 0)
+			newFile.Seek(start, 0) // Since this thread is only downloading after 'start' bytes, we seek the file to that position.
 			fmt.Fprintf(connection, "2 %s %d %d\n", hash, start, end)
 
 			//Start writing in the file
@@ -208,7 +209,7 @@ func receivefile(i int) {
 					break
 				}
 			}
-			mutex.Lock()
+			mutex.Lock() // To calculate progress.
 			bytesTransferred += end - start
 			threadsRemaining--
 			speed := (bytesTransferred / 1024) / int64(math.Ceil(time.Since(t).Seconds()))
