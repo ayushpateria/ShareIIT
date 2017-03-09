@@ -40,6 +40,7 @@ func fetchIPS() {
 	} else {
 		defer response.Body.Close()
 		r, _ := ioutil.ReadAll(response.Body)
+		//json unnmarshal is used to decode
 		json.Unmarshal(r, &ips)
 		if err != nil {
 			fmt.Println(err)

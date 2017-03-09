@@ -19,7 +19,7 @@ import (
 
 //Define the size of how big the chunks of data will be send each time
 var BUFFERSIZE int64 = 81920
-
+//defining server parameters
 const (
 	CONN_HOST = "0.0.0.0"
 	CONN_PORT = "3333"
@@ -32,7 +32,7 @@ type File_s struct {
 	Size int64
 	path string
 }
-
+//array of struct for storing file info
 var files []File_s
 var INSERT_URL = "http://ayushpateria.com/ShareIIT/insert.php"
 var myIP string
@@ -67,7 +67,7 @@ func main() {
 	sendIP()
 
 	quit := make(chan struct{})
-
+	//send ip to the server every 5 minutes, and checks whether server is online or not
 	ticker := time.NewTicker(300 * time.Second)
 
 	go func() {
@@ -172,7 +172,7 @@ func list() string {
 		}
 		return nil
 	})
-
+	//json marshal is used encode
 	b, err := json.Marshal(files)
 	if err != nil {
 		fmt.Println("error:", err)
