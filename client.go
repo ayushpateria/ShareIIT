@@ -23,7 +23,6 @@ type File_s struct {
 	Size float64
 	path string
 	ip   string
-
 }
 
 var files []File_s
@@ -32,7 +31,11 @@ var LIST_URL = "http://ayushpateria.com/ShareIIT/list.php"
 
 //Define that the binairy data of the file will be sent 1024 bytes at a time
 const BUFFERSIZE = 81920
+const NUM_THREADS = 4
 
+/*
+To know the servers which are active in the network we store it in a list on a website. This function fetches that list.
+*/
 func fetchIPS() {
 	ips = nil
 	response, err := http.Get(LIST_URL)
@@ -50,6 +53,9 @@ func fetchIPS() {
 
 }
 
+/*
+This function connects to a server and asks it for all the files it has.
+*/
 func updateList(ip string) {
 	var lFiles []File_s
 	connection, err := net.DialTimeout("tcp", ip+":3333", time.Duration(5)*time.Second)
@@ -68,6 +74,9 @@ func updateList(ip string) {
 	files = append(files, lFiles...)
 }
 
+/*
+This function calls updateList on all the ips concurrently and creates one big list containing all the files.
+*/
 func createList() {
 	files = nil
 	fetchIPS()
@@ -108,7 +117,7 @@ func main() {
 			for i, value := range files {
 				fmt.Print((i + 1))
 				fmt.Print(". " + value.Name + "		")
-				fmt.Print(value.Size)
+				fmt.Print(value.Size / 1024)
 				fmt.Println(" kb")
 			}
 
@@ -123,7 +132,7 @@ func main() {
 			if id > len(files) {
 				fmt.Println("Please enter a valid ID.")
 			} else {
-					receivefile(id - 1)
+				receivefile(id - 1)
 			}
 		} else if option[:1] == "3" {
 
@@ -148,115 +157,78 @@ func main() {
 		} else if option[:1] == "0" {
 			break
 		} else {
-			fmt.Println("INVALID")
-			fmt.Println("1. List all available files.")
-			fmt.Println("2. Download a file,")
-			fmt.Println("3. Search a file.")
-			fmt.Println("0. Exit.")
+			fmt.Println("Please enter a valid choice.")
 		}
 	}
 
 }
-	var TotalbytesTransferred int64
-	var percentage int 
-	var count int
 
-	func DownloadProgress(size float64 ,i int ){								//Function which shows download progress
-		t := time.Now()
-		//count=0
-		for(TotalbytesTransferred < int64(size) && size > 200000 ){				//For file size greater than 200MB
-			time.Sleep( time.Second * 2)
-			temp := percentage
-			speed := ((TotalbytesTransferred) / 1024) / int64(math.Ceil(time.Since(t).Seconds()))
-				if	(TotalbytesTransferred < int64(size) ){
-					percentage = int((TotalbytesTransferred)*100/int64(size))
-					if temp ==percentage {
-						count++
-					}
-					if count ==5{
-						fmt.Println("Connection lost .....Retrieving wait a min")
-						getBackConnection(i)
-						break
-					}
-					out := "Finished : " + strconv.Itoa(percentage) + "%, Avg. Speed : " + strconv.Itoa(int(speed)) + " kb/s\n"
-					os.Stdout.Write([]byte(out))
-					}
-			}
-		for(TotalbytesTransferred < int64(size) && size <= 200000 ){				//For filze size less than 200MB
+var totalBytesTransferred int64
+var percentage int
+var count int
 
-			time.Sleep(  time.Second * 1)
-			temp := percentage
-			speed := ((TotalbytesTransferred) / 1024) / int64(math.Ceil(time.Since(t).Seconds()))
-				if	(TotalbytesTransferred < int64(size) ){
-					percentage = int((TotalbytesTransferred)*100/int64(size))
-					if temp ==percentage {
-						count++
-					}
-					if count ==5{													// which checks if connection is lost
-						fmt.Println("Connection lost .....Retrieving wait a min")
-						getBackConnection(i)
-						break
-					}
+/*
+This function calculates the percentage of file which has been downloaded and prints it. It runs every 2 or 1 second.
+*/
+func DownloadProgress(size float64, i int) {
+	t := time.Now()
+	count = 0
+	var temp int64
+	for totalBytesTransferred < int64(size) {
 
-					out := "Finished : " + strconv.Itoa(int((TotalbytesTransferred)*100/int64(size))) + "%, Avg. Speed : " + strconv.Itoa(int(speed)) + " kb/s\n"
-					os.Stdout.Write([]byte(out))
-					}
-			}
+		speed := ((totalBytesTransferred) / 1024) / int64(math.Ceil(time.Since(t).Seconds()))
+		percentage = int((totalBytesTransferred) * 100 / int64(size))
+		if temp == totalBytesTransferred {
+			count++
+		} else {
+			count = 0
+		}
+		if count == 5 { // If even after 5 (or 10) seconds the download percentage stays same, we change the server.
+			fmt.Println("\nSeems like there is a problem with the connection. Please wait while we see if we can connect you to some other server.")
 
-	}
+			getBackConnection(i)
+			break
+		}
+		out := "\rFinished : " + strconv.Itoa(percentage) + "%, Avg. Speed : " + strconv.Itoa(int(speed)) + " kb/s"
+		os.Stdout.Write([]byte(out))
 
-func getBackConnection(i int) {											//Function which checks for same file in another 
-																		// server and get backs connection
+		temp = totalBytesTransferred
 
-				file := files[i]
-				filename := file.Name
-				createList()
-				var flag int
-				flag=0
-				for i, value := range files {
-					
-					if strings.Contains(value.Name, strings.Trim(filename, "\n")) {
-						fmt.Println("Connection Found....")
-						receivefile(i)
-						flag++
-					}
-					i=i+1
-				}
-					if flag == 0 {
-						fmt.Println("Sorry ....Connection permanantely lost.Download Failed :(")
-						fmt.Println()
-						main()
-					}
+		if size > 200*1024*1024 {
+			time.Sleep(time.Second * 2) //For file size greater than 200MB
+		} else {
+			time.Sleep(time.Second * 1)
 		}
 
-type indexrange struct{
-	 startindex int64
+	}
 }
 
-var pointer [4]indexrange												//Initialise to the number of threads pointer
-																		//Which points to point where it lost connection
+type indexrange struct {
+	startindex int64
+}
 
+var pointer [NUM_THREADS]indexrange //Initialise to the number of threads pointer which points to point where it lost connection
+
+/*
+This function downloads the file by breaking in NUM_THREADS independent pieces. Each piece is downloaded concurrently and is written onto the output file.
+*/
 func receivefile(i int) {
 
-	//os.Chdir("Shared")
-
-	NUM_THREADS := 4
-
 	file := files[i]
-	fmt.Println("Downloading "  +file.Name + ", this may take a while.")
+	fmt.Println("Downloading " + file.Name + ", this may take a while.")
 	hash := files[i].Hash
 
 	size := file.Size
-	//waitgroup waits for a collection of goroutines to complete
+
+	// Waitgroup waits for a collection of goroutines to complete
 	var wg sync.WaitGroup
 	inc := int64(math.Ceil(size / float64(NUM_THREADS)))
 	var j int64
-	
-	//threadsRemaining := NUM_THREADS
-	//var mutex = &sync.Mutex{}
-	pointer[0].startindex=0
+
+	var mutex = &sync.Mutex{}
+	pointer[0].startindex = 0
 	go DownloadProgress(size, i)
-	threadindex :=0
+	threadindex := 0
 	for j = 0; j < int64(math.Ceil(size)); j = j + inc {
 		start := j
 		end := start + inc
@@ -287,26 +259,14 @@ func receivefile(i int) {
 
 			//Start writing in the file
 			for {
-				if (end-start-receivedBytes) < BUFFERSIZE {
-						n, err := io.CopyN(newFile, connection, (end-start-receivedBytes))
-															//Empty the remaining bytes that we don't need from the network buffer
-						if err != nil && err != io.EOF {
-							log.Fatal(err)
-						}
-						//mutex.Lock()
-						TotalbytesTransferred += n
-						//mutex.Unlock()
-						pointer[threadindex].startindex += n
-						break
-					}
 				n, err := io.CopyN(newFile, connection, BUFFERSIZE)
-		        receivedBytes += n
-				pointer[threadindex].startindex=receivedBytes
-				//fmt.Println("threadindex  pointer ",threadindex,receivedBytes)				
-				//mutex.Lock()
-				TotalbytesTransferred += n
-				//mutex.Unlock()
-				
+
+				mutex.Lock()
+				receivedBytes += n
+				pointer[threadindex].startindex = receivedBytes
+				totalBytesTransferred += n
+				mutex.Unlock()
+
 				if err != nil && err != io.EOF {
 					log.Fatal(err)
 				}
@@ -314,15 +274,39 @@ func receivefile(i int) {
 					break
 				}
 			}
-			
-		}(start, end,threadindex)
+
+		}(start, end, threadindex)
 		threadindex++
 	}
 
 	// Wait until all parts have been finished downloading.
 	wg.Wait()
-	fmt.Println("Received file completely!")
-	//os.Chdir("..")
 
-	main()
+	fmt.Println("Received file completely!")
+
+}
+
+/*
+In the case there was a connection drop in between the file transfer, this function tries to find the find the same file in other active servers.
+If it successfully finds a match, it will reestablish the connection with the new server and resume the download from the same point.
+*/
+func getBackConnection(i int) {
+
+	file := files[i]
+	filename := file.Name
+	createList()
+	var flag int
+	flag = 0
+	for i, value := range files {
+
+		if strings.Contains(value.Name, strings.Trim(filename, "\n")) {
+			fmt.Println("Resuming your download...")
+			receivefile(i)
+			flag++
+		}
+		i = i + 1
+	}
+	if flag == 0 {
+		fmt.Println("Sorry, it's not possible to continue the download at the moment.")
+	}
 }
